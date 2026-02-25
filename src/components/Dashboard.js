@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import './Dashboard.css';
 import AddClient from './AddClient';
@@ -17,17 +17,12 @@ function Dashboard({ user, token, onLogout }) {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    const headers = {
+    const headers = useMemo(() => ({
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-    };
+    }), [token]);
 
-    // Fetch clients on mount
-    useEffect(() => {
-        fetchClients();
-    }, []);
-
-    const fetchClients = async () => {
+    const fetchClients = useCallback(async () => {
         try {
             setLoading(true);
             const response = await axios.get(`${API_URL}/api/clients`, { headers });
@@ -37,7 +32,12 @@ function Dashboard({ user, token, onLogout }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [headers]);
+
+    // Fetch clients on mount
+    useEffect(() => {
+        fetchClients();
+    }, [fetchClients]);
 
     const handleClientSelect = async (client) => {
         setSelectedClient(client);
