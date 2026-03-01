@@ -619,6 +619,16 @@ tbody tr:hover td { background: #fafafa; }
   border: 1px solid #fed7d7;
 }
 
+.modal-success {
+  margin: 16px 24px 0;
+  padding: 10px 14px;
+  background: #f0fff4;
+  color: #276749;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid #c6f6d5;
+}
+
 .modal-form-group {
   padding: 16px 24px 0;
 }

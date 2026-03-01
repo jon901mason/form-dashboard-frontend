@@ -87,6 +87,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
     const [showAddClient, setShowAddClient] = useState(false);
     const [showEditClient, setShowEditClient] = useState(false);
     const [showAccountSettings, setShowAccountSettings] = useState(false);
+    const [showCreateUser, setShowCreateUser] = useState(false);
     const [clientsOpen, setClientsOpen] = useState(true);
     const [expandedClientIds, setExpandedClientIds] = useState(new Set());
     const [avatarOpen, setAvatarOpen] = useState(false);
@@ -517,6 +518,11 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                                 <div className="dropdown-item" onClick={(e) => { e.stopPropagation(); setAvatarOpen(false); setShowAccountSettings(true); }}>
                                     <i className="ph-light ph-gear"></i> Account Settings
                                 </div>
+                                {user?.is_admin && (
+                                    <div className="dropdown-item" onClick={(e) => { e.stopPropagation(); setAvatarOpen(false); setShowCreateUser(true); }}>
+                                        <i className="ph-light ph-user-plus"></i> Create User
+                                    </div>
+                                )}
                                 <div
                                     className="dropdown-item danger"
                                     onClick={(e) => { e.stopPropagation(); onLogout(); }}
@@ -607,6 +613,13 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                     token={token}
                     onSave={onUpdateUser}
                     onClose={() => setShowAccountSettings(false)}
+                />
+            )}
+
+            {showCreateUser && (
+                <CreateUser
+                    token={token}
+                    onClose={() => setShowCreateUser(false)}
                 />
             )}
         </div>
@@ -1045,6 +1058,69 @@ function AccountSettings({ user, token, onSave, onClose }) {
                         <button type="button" className="modal-cancel-btn" onClick={onClose}>Cancel</button>
                         <button type="submit" className="modal-save-btn" disabled={saving}>
                             {saving ? 'Saving…' : 'Save Changes'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ── CREATE USER ───────────────────────────────────────────────
+function CreateUser({ token, onClose }) {
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setError('');
+        setSuccess('');
+        try {
+            await axios.post(`${API_URL}/api/admin/users`, { name, email, password }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setSuccess(`Account created for ${email}`);
+            setName('');
+            setEmail('');
+            setPassword('');
+        } catch (err) {
+            setError(err?.response?.data?.error || 'Failed to create user');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-box">
+                <div className="modal-header">
+                    <h2>Create User</h2>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+                {error && <div className="modal-error">{error}</div>}
+                {success && <div className="modal-success">{success}</div>}
+                <form onSubmit={handleSubmit}>
+                    <div className="modal-form-group">
+                        <label>Name</label>
+                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </div>
+                    <div className="modal-form-group">
+                        <label>Email</label>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                    <div className="modal-form-group">
+                        <label>Password</label>
+                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                    </div>
+                    <div className="modal-actions">
+                        <button type="button" className="modal-cancel-btn" onClick={onClose}>Cancel</button>
+                        <button type="submit" className="modal-save-btn" disabled={saving}>
+                            {saving ? 'Creating…' : 'Create User'}
                         </button>
                     </div>
                 </form>
