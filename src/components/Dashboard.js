@@ -1096,7 +1096,7 @@ async function downloadConsentPDF(submission) {
     doc.text(`Submitted: ${new Date(submission.submitted_at).toLocaleString()}`, 20, 33);
 
     let y = 45;
-    for (const [key, value] of Object.entries(submission.submission_data || {})) {
+    for (const [key, value] of sortedConsentEntries(submission.submission_data)) {
         const strVal = String(value || '');
         const isSignature = strVal.endsWith('.png') && !strVal.startsWith('http');
 
@@ -1116,6 +1116,10 @@ async function downloadConsentPDF(submission) {
                 doc.text('[Signature image unavailable]', 20, y);
                 y += 8;
             }
+        } else if (strVal === 'Agreed') {
+            doc.setFont('helvetica', 'normal');
+            doc.text('\u2713 Agreed', 20, y);
+            y += 8;
         } else {
             doc.setFont('helvetica', 'normal');
             const lines = doc.splitTextToSize(strVal || '—', 150);
