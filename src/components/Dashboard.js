@@ -1015,6 +1015,46 @@ function AccountSettings({ user, token, onSave, onClose }) {
     );
 }
 
+// ── CONSENT FORM FIELD ORDER ───────────────────────────────────
+const CONSENT_FIELD_ORDER = [
+    'Company Name (official company name to include on invoices)',
+    'Client Name (main point of contact)',
+    'Client Email',
+    'Client Phone',
+    'Street Address',
+    'City',
+    'State',
+    'ZIP Code',
+    'Company Main Phone Number',
+    'Company Website',
+    'Is your physical address different from your mailing address?',
+    'Accounting Contact Name',
+    'Accounting Contact Email',
+    'Accounting Contact Phone Number',
+    'Is your accounting address different from your mailing address?',
+    'Sales Tax Status',
+    'Additional Invoicing Instructions',
+    'Payment',
+    'Payment to Media Vendors',
+    'Production & Hard Costs Billing',
+    'Sales Tax',
+    'Overdue Invoices',
+    'Artificial Intelligence',
+    'Termination',
+    'Signature',
+];
+
+function sortedConsentEntries(submissionData) {
+    const entries = Object.entries(submissionData || {});
+    return entries.sort(([a], [b]) => {
+        const ai = CONSENT_FIELD_ORDER.indexOf(a);
+        const bi = CONSENT_FIELD_ORDER.indexOf(b);
+        const aPos = ai === -1 ? 9999 : ai;
+        const bPos = bi === -1 ? 9999 : bi;
+        return aPos - bPos;
+    });
+}
+
 // ── CONSENT FORM HELPERS ───────────────────────────────────────
 function getCompanyName(submissionData) {
     if (!submissionData) return 'Unknown';
@@ -1137,7 +1177,7 @@ function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }
                         </button>
                     </div>
                     <div className="consent-detail-fields">
-                        {Object.entries(selectedSubmission.submission_data || {}).map(([key, value]) => {
+                        {sortedConsentEntries(selectedSubmission.submission_data).map(([key, value]) => {
                             const strVal = String(value || '');
                             const isSignature = strVal.endsWith('.png') && !strVal.startsWith('http');
                             const sigUrl = isSignature && selectedSubmission.wordpress_url
