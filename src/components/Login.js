@@ -7,9 +7,6 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 function Login({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [inviteCode, setInviteCode] = useState('');
-    const [isSignup, setIsSignup] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -17,14 +14,8 @@ function Login({ onLogin }) {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
-            const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
-            const data = isSignup
-                ? { email, password, name, invite_code: inviteCode }
-                : { email, password };
-
-            const response = await axios.post(`${API_URL}${endpoint}`, data);
+            const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
             onLogin(response.data.token, response.data.user);
         } catch (err) {
             setError(err.response?.data?.error || 'An error occurred');
@@ -39,36 +30,11 @@ function Login({ onLogin }) {
                 <img src="https://trade-craft.com/wp-content/uploads/2025/01/TRADECRAFT_LOGO_PRIMARY_rev.png" alt="TradeCraft" />
             </div>
             <div className="login-box">
-                <h1>{isSignup ? 'Create Account' : 'Sign In'}</h1>
+                <h1>Sign In</h1>
 
                 {error && <div className="error-message">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
-                    {isSignup && (
-                        <>
-                        <div className="form-group">
-                            <label>Name</label>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Your name"
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Invite Code</label>
-                            <input
-                                type="password"
-                                value={inviteCode}
-                                onChange={(e) => setInviteCode(e.target.value)}
-                                placeholder="Enter invite code"
-                                required
-                            />
-                        </div>
-                        </>
-                    )}
-
                     <div className="form-group">
                         <label>Email</label>
                         <input
@@ -79,7 +45,6 @@ function Login({ onLogin }) {
                             required
                         />
                     </div>
-
                     <div className="form-group">
                         <label>Password</label>
                         <input
@@ -90,19 +55,10 @@ function Login({ onLogin }) {
                             required
                         />
                     </div>
-
                     <button type="submit" disabled={loading}>
-                        {loading ? 'Loading...' : (isSignup ? 'Sign Up' : 'Login')}
+                        {loading ? 'Signing in…' : 'Sign In'}
                     </button>
                 </form>
-
-                <div className="auth-toggle">
-                    {isSignup ? (
-                        <p>Already have an account? <button onClick={() => setIsSignup(false)} className="link-button">Login</button></p>
-                    ) : (
-                        <p>Don't have an account? <button onClick={() => setIsSignup(true)} className="link-button">Sign Up</button></p>
-                    )}
-                </div>
             </div>
         </div>
     );

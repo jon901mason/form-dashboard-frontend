@@ -100,23 +100,3 @@
   border: 1px solid #fed7d7;
 }
 
-.auth-toggle {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 13px;
-  color: #999;
-}
-
-.link-button {
-  background: none;
-  border: none;
-  color: #f15e24;
-  cursor: pointer;
-  text-decoration: underline;
-  font-weight: 600;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-.link-button:hover {
-  color: #c94d1a;
-}
