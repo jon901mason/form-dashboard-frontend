@@ -8,6 +8,7 @@ function Login({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const [inviteCode, setInviteCode] = useState('');
     const [isSignup, setIsSignup] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ function Login({ onLogin }) {
         try {
             const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
             const data = isSignup
-                ? { email, password, name }
+                ? { email, password, name, invite_code: inviteCode }
                 : { email, password };
 
             const response = await axios.post(`${API_URL}${endpoint}`, data);
@@ -34,13 +35,17 @@ function Login({ onLogin }) {
 
     return (
         <div className="login-container">
+            <div className="login-logo">
+                <img src="https://trade-craft.com/wp-content/uploads/2025/01/TRADECRAFT_LOGO_PRIMARY_rev.png" alt="TradeCraft" />
+            </div>
             <div className="login-box">
-                <h1>{isSignup ? 'Create Account' : 'Login'}</h1>
+                <h1>{isSignup ? 'Create Account' : 'Sign In'}</h1>
 
                 {error && <div className="error-message">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                     {isSignup && (
+                        <>
                         <div className="form-group">
                             <label>Name</label>
                             <input
@@ -51,6 +56,17 @@ function Login({ onLogin }) {
                                 required
                             />
                         </div>
+                        <div className="form-group">
+                            <label>Invite Code</label>
+                            <input
+                                type="password"
+                                value={inviteCode}
+                                onChange={(e) => setInviteCode(e.target.value)}
+                                placeholder="Enter invite code"
+                                required
+                            />
+                        </div>
+                        </>
                     )}
 
                     <div className="form-group">
