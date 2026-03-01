@@ -1089,6 +1089,30 @@ async function downloadConsentPDF(submission) {
     doc.save(`consent-form-${companyName.replace(/\s+/g, '-')}.pdf`);
 }
 
+function ConsentFieldRow({ label, strVal, sigUrl, isAgreement }) {
+    const [expanded, setExpanded] = useState(false);
+    return (
+        <div className="consent-field-row">
+            <div className="consent-field-label">{label}</div>
+            <div className="consent-field-value">
+                {sigUrl ? (
+                    <img src={sigUrl} alt="Signature" className="consent-signature-img" />
+                ) : isAgreement ? (
+                    <div className="consent-agreement">
+                        <span className="consent-agreed-badge">✓ Agreed</span>
+                        <button className="consent-expand-btn" onClick={() => setExpanded(e => !e)}>
+                            {expanded ? 'hide terms' : 'view terms'}
+                        </button>
+                        {expanded && <div className="consent-agreement-text">{strVal}</div>}
+                    </div>
+                ) : (
+                    strVal || '—'
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ── CONSENT FORM VIEW ──────────────────────────────────────────
 function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }) {
     if (selectedSubmission) {
@@ -1119,15 +1143,15 @@ function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }
                             const sigUrl = isSignature && selectedSubmission.wordpress_url
                                 ? `${selectedSubmission.wordpress_url.replace(/\/$/, '')}/wp-content/uploads/gravity_forms/sig/${strVal}`
                                 : null;
+                            const isAgreement = strVal.length > 80 && !isSignature;
                             return (
-                                <div key={key} className="consent-field-row">
-                                    <div className="consent-field-label">{key}</div>
-                                    <div className="consent-field-value">
-                                        {sigUrl
-                                            ? <img src={sigUrl} alt="Signature" className="consent-signature-img" />
-                                            : (strVal || '—')}
-                                    </div>
-                                </div>
+                                <ConsentFieldRow
+                                    key={key}
+                                    label={key}
+                                    strVal={strVal}
+                                    sigUrl={sigUrl}
+                                    isAgreement={isAgreement}
+                                />
                             );
                         })}
                     </div>
