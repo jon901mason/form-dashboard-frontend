@@ -88,6 +88,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
     const [showEditClient, setShowEditClient] = useState(false);
     const [showAccountSettings, setShowAccountSettings] = useState(false);
     const [clientsOpen, setClientsOpen] = useState(true);
+    const [expandedClientIds, setExpandedClientIds] = useState(new Set());
     const [avatarOpen, setAvatarOpen] = useState(false);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -227,7 +228,20 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         }
     }, [headers]);
 
+    const handleClientToggle = (clientId) => {
+        setExpandedClientIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(clientId)) {
+                next.delete(clientId);
+            } else {
+                next.add(clientId);
+            }
+            return next;
+        });
+    };
+
     const handleClientSelect = (client) => {
+        setExpandedClientIds((prev) => { const next = new Set(prev); next.add(client.id); return next; });
         setView('client');
         setSelectedClient(client);
         setError('');
@@ -289,6 +303,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         try {
             await axios.delete(`${API_URL}/api/clients/${selectedClient.id}`, { headers });
             setClients((prev) => prev.filter((c) => c.id !== selectedClient.id));
+            setExpandedClientIds((prev) => { const next = new Set(prev); next.delete(selectedClient.id); return next; });
             setView('home');
             setSelectedClient(null);
             setForms([]);
@@ -439,13 +454,23 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
 
                     <div className={`client-sub-list${clientsOpen ? ' open' : ''}`}>
                         {clients.map((c) => (
-                            <div
-                                key={c.id}
-                                className={`client-sub-item${selectedClient?.id === c.id ? ' active' : ''}`}
-                                onClick={() => handleClientSelect(c)}
-                            >
-                                <i className="ph-light ph-caret-right"></i>
-                                {c.name}
+                            <div key={c.id}>
+                                <div
+                                    className={`client-sub-item${expandedClientIds.has(c.id) ? ' expanded' : ''}`}
+                                    onClick={() => handleClientToggle(c.id)}
+                                >
+                                    <i className={`ph-light ${expandedClientIds.has(c.id) ? 'ph-caret-down' : 'ph-caret-right'}`}></i>
+                                    {c.name}
+                                </div>
+                                <div className={`client-page-list${expandedClientIds.has(c.id) ? ' open' : ''}`}>
+                                    <div
+                                        className={`client-page-item${selectedClient?.id === c.id && view === 'client' ? ' active' : ''}`}
+                                        onClick={() => handleClientSelect(c)}
+                                    >
+                                        <i className="ph-light ph-list-bullets"></i>
+                                        Form Submissions
+                                    </div>
+                                </div>
                             </div>
                         ))}
                         {clients.length === 0 && (
@@ -461,7 +486,21 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
             <div className="main">
                 {/* ── TOPBAR ── */}
                 <div className="topbar">
-                    <div className="topbar-title"></div>
+                    {view === 'client' && selectedClient ? (
+                        <div className="topbar-client-section">
+                            <span className="topbar-client-name">{selectedClient.name}</span>
+                            <div className="topbar-client-actions">
+                                <button className="delete-client-btn" onClick={() => setShowEditClient(true)}>
+                                    <i className="ph-light ph-pencil-simple"></i> Edit
+                                </button>
+                                <button className="delete-client-btn" onClick={handleDeleteClient}>
+                                    <i className="ph-light ph-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="topbar-title"></div>
+                    )}
 
                     <button className="add-client-btn" onClick={() => setShowAddClient(true)}>
                         <span style={{ fontSize: 18, lineHeight: 1, marginTop: -1 }}>+</span> Add Client
@@ -519,7 +558,6 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                     ) : (
                         <ClientView
                             client={selectedClient}
-                            onEditClient={() => setShowEditClient(true)}
                             clientStats={clientStats}
                             forms={forms}
                             selectedForm={selectedForm}
@@ -533,7 +571,6 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                             onToggleMessage={toggleMessage}
                             onDelete={handleDelete}
                             onDeleteForm={handleDeleteForm}
-                            onDeleteClient={handleDeleteClient}
                             startDate={startDate}
                             endDate={endDate}
                             setStartDate={setStartDate}
@@ -702,7 +739,7 @@ function StatCardHome({ label, value, iconClass, color, sparklineData, trend }) 
 function ClientView({
     client, clientStats, forms, selectedForm, onFormSelect,
     filteredSubmissions, submissions, columns, hasCompoundName, dataKeys,
-    expandedMessages, onToggleMessage, onDelete, onDeleteForm, onDeleteClient, onEditClient,
+    expandedMessages, onToggleMessage, onDelete, onDeleteForm,
     startDate, endDate, setStartDate, setEndDate, onDownloadCSV,
     onSync, syncing, syncResult, loading,
 }) {
@@ -713,15 +750,7 @@ function ClientView({
             {/* Page top: heading + stats + sync */}
             <div className="page-top">
                 <div className="page-top-left">
-                    <h1>{client.name}</h1>
-                    <div className="client-actions">
-                        <button className="delete-client-btn" onClick={onEditClient}>
-                            <i className="ph-light ph-pencil-simple"></i> Edit
-                        </button>
-                        <button className="delete-client-btn" onClick={onDeleteClient}>
-                            <i className="ph-light ph-trash"></i> Delete
-                        </button>
-                    </div>
+                    <h1>Form Submissions</h1>
                 </div>
                 <div className="page-top-right">
                     <div className="stat-grid-client">

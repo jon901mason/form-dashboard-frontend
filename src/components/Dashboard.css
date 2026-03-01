@@ -64,7 +64,7 @@ body {
   padding: 10px 20px;
   color: rgba(255,255,255,0.55);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   user-select: none;
@@ -110,7 +110,7 @@ body {
 }
 
 .client-sub-list.open {
-  max-height: 600px;
+  max-height: 1200px;
 }
 
 .client-sub-item {
@@ -132,6 +132,42 @@ body {
 }
 
 .client-sub-item.active {
+  color: #f15e24;
+}
+
+.client-sub-item.expanded {
+  color: rgba(255,255,255,0.75);
+}
+
+.client-page-list {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease;
+}
+
+.client-page-list.open {
+  max-height: 300px;
+}
+
+.client-page-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 20px 7px 60px;
+  color: rgba(255,255,255,0.35);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.client-page-item i { font-size: 12px; }
+
+.client-page-item:hover {
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.04);
+}
+
+.client-page-item.active {
   color: #f15e24;
 }
 
@@ -162,6 +198,24 @@ body {
   flex: 1;
 }
 
+.topbar-client-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-client-name {
+  font-size: 25px;
+  font-weight: 600;
+  color: #1a1d2e;
+}
+
+.topbar-client-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .add-client-btn {
   display: flex;
   align-items: center;
@@ -172,7 +226,7 @@ body {
   border-radius: 8px;
   padding: 9px 18px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   transition: opacity 0.2s;
@@ -260,7 +314,7 @@ body {
 
 .page-heading h1 {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   color: #1a1d2e;
 }
 
@@ -294,7 +348,7 @@ body {
 .stat-label {
   font-size: 12px;
   color: #999;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -317,7 +371,7 @@ body {
 
 .stat-value {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   color: #1a1d2e;
   line-height: 1;
   margin-bottom: 6px;
@@ -330,7 +384,7 @@ body {
 
 .stat-trend {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   margin-top: 4px;
 }
 .stat-trend.up   { color: #38a169; }
@@ -432,7 +486,7 @@ tbody tr:hover td { background: #fafafa; }
 }
 
 .page-top-left h1 {
-  font-size: 36px;
+  font-size: 23px;
   font-weight: 600;
   color: #1a1d2e;
 }
@@ -629,7 +683,7 @@ tbody tr:hover td { background: #fafafa; }
   border-radius: 8px;
   padding: 10px 18px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   transition: opacity 0.2s;
@@ -710,7 +764,7 @@ tbody tr:hover td { background: #fafafa; }
 
 .form-plugin {
   font-size: 11px;
-  font-weight: 400;
+  font-weight: 600;
   color: #999;
 }
 
@@ -893,7 +947,7 @@ thead th:last-child { background: #fafafa; }
   border: none;
   color: #f15e24;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   padding: 3px 0 0 0;
   font-family: 'Plus Jakarta Sans', sans-serif;
@@ -953,7 +1007,7 @@ thead th:last-child { background: #fafafa; }
   border: none;
   color: #003c49;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   padding: 0;
@@ -986,7 +1040,7 @@ thead th:last-child { background: #fafafa; }
   border-radius: 8px;
   padding: 9px 16px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   transition: opacity 0.2s;
