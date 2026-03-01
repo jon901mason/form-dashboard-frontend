@@ -506,6 +506,15 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                             submissions={consentSubmissions}
                             selectedSubmission={selectedConsentSubmission}
                             onSelectSubmission={setSelectedConsentSubmission}
+                            onDelete={async (id) => {
+                                if (!window.confirm('Delete this submission?')) return;
+                                try {
+                                    await axios.delete(`${API_URL}/api/forms/submissions/${id}`, { headers });
+                                    setConsentSubmissions((prev) => prev.filter((s) => s.id !== id));
+                                } catch (err) {
+                                    alert(getAxiosErrorMessage(err));
+                                }
+                            }}
                         />
                     ) : (
                         <ClientView
@@ -1158,7 +1167,7 @@ function ConsentFieldRow({ label, strVal, sigUrl, isAgreement }) {
 }
 
 // ── CONSENT FORM VIEW ──────────────────────────────────────────
-function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }) {
+function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission, onDelete }) {
     if (selectedSubmission) {
         const companyName = getCompanyName(selectedSubmission.submission_data);
         return (
@@ -1227,6 +1236,7 @@ function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }
                                 <tr>
                                     <th>Company Name</th>
                                     <th>Submitted</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1238,6 +1248,14 @@ function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }
                                     >
                                         <td>{getCompanyName(sub.submission_data)}</td>
                                         <td>{formatDate(sub.submitted_at)}</td>
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                className="delete-btn"
+                                                onClick={() => onDelete(sub.id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
