@@ -1143,7 +1143,7 @@ function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission }
                             const sigUrl = isSignature && selectedSubmission.wordpress_url
                                 ? `${selectedSubmission.wordpress_url.replace(/\/$/, '')}/wp-content/uploads/gravity_forms/sig/${strVal}`
                                 : null;
-                            const isAgreement = strVal.length > 80 && !isSignature;
+                            const isAgreement = strVal === 'Agreed';
                             return (
                                 <ConsentFieldRow
                                     key={key}
