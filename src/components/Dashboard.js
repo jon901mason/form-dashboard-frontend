@@ -508,7 +508,11 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                     </button>
 
                     <div className="avatar-wrap" ref={avatarRef} onClick={() => setAvatarOpen((o) => !o)}>
-                        <div className="avatar">{initials}</div>
+                        <div className="avatar">
+                            {user?.avatar_url
+                                ? <img src={user.avatar_url} alt={initials} className="avatar-img" />
+                                : initials}
+                        </div>
                         {avatarOpen && (
                             <div className="avatar-dropdown">
                                 <div className="dropdown-header">
@@ -1007,6 +1011,7 @@ function EditClient({ client, onSave, onClose }) {
 function AccountSettings({ user, token, onSave, onClose }) {
     const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
+    const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -1015,7 +1020,7 @@ function AccountSettings({ user, token, onSave, onClose }) {
         setSaving(true);
         setError('');
         try {
-            const res = await axios.patch(`${API_URL}/api/auth/me`, { name, email }, {
+            const res = await axios.patch(`${API_URL}/api/auth/me`, { name, email, avatar_url: avatarUrl || null }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             onSave(res.data.user);
@@ -1054,6 +1059,15 @@ function AccountSettings({ user, token, onSave, onClose }) {
                             required
                         />
                     </div>
+                    <div className="modal-form-group">
+                        <label>Profile Photo URL</label>
+                        <input
+                            type="url"
+                            value={avatarUrl}
+                            onChange={(e) => setAvatarUrl(e.target.value)}
+                            placeholder="https://..."
+                        />
+                    </div>
                     <div className="modal-actions">
                         <button type="button" className="modal-cancel-btn" onClick={onClose}>Cancel</button>
                         <button type="submit" className="modal-save-btn" disabled={saving}>
@@ -1071,6 +1085,7 @@ function CreateUser({ token, onClose }) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -1081,13 +1096,14 @@ function CreateUser({ token, onClose }) {
         setError('');
         setSuccess('');
         try {
-            await axios.post(`${API_URL}/api/admin/users`, { name, email, password }, {
+            await axios.post(`${API_URL}/api/admin/users`, { name, email, password, avatar_url: avatarUrl || null }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess(`Account created for ${email}`);
             setName('');
             setEmail('');
             setPassword('');
+            setAvatarUrl('');
         } catch (err) {
             setError(err?.response?.data?.error || 'Failed to create user');
         } finally {
@@ -1116,6 +1132,10 @@ function CreateUser({ token, onClose }) {
                     <div className="modal-form-group">
                         <label>Password</label>
                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                    </div>
+                    <div className="modal-form-group">
+                        <label>Profile Photo URL</label>
+                        <input type="url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
                     </div>
                     <div className="modal-actions">
                         <button type="button" className="modal-cancel-btn" onClick={onClose}>Cancel</button>
