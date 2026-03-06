@@ -410,7 +410,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
 
     const columns = useMemo(() => {
         if (!activeSubmissions.length) return [];
-        if (selectedForm === null) return ['Form', ...dataKeys, 'Submitted', ''];
+        if (selectedForm === null) return ['Submitted', 'Form', ...dataKeys, ''];
         if (hasCompoundName) return ['First Name', 'Last Name', ...dataKeys, 'Submitted', ''];
         return [...dataKeys, 'Submitted', ''];
     }, [activeSubmissions, dataKeys, hasCompoundName, selectedForm]);
@@ -420,18 +420,20 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         if (!filteredSubmissions.length) { alert('No submissions to download'); return; }
         const isAllForms = selectedForm === null;
         const csvHeaders = isAllForms
-            ? ['Form', ...dataKeys, 'Submitted']
+            ? ['Submitted', 'Form', ...dataKeys]
             : hasCompoundName
                 ? ['First Name', 'Last Name', ...dataKeys, 'Submitted']
                 : [...dataKeys, 'Submitted'];
         const rows = filteredSubmissions.map((sub) => {
             const data = sub?.submission_data || {};
             const { first, last } = splitName(data?.Name);
-            const vals = [
-                ...(isAllForms ? [sub.form_name] : hasCompoundName ? [first, last] : []),
-                ...dataKeys.map((k) => data?.[k] ?? ''),
-                new Date(sub.submitted_at).toLocaleString(),
-            ];
+            const vals = isAllForms
+                ? [new Date(sub.submitted_at).toLocaleString(), sub.form_name, ...dataKeys.map((k) => data?.[k] ?? '')]
+                : [
+                    ...(hasCompoundName ? [first, last] : []),
+                    ...dataKeys.map((k) => data?.[k] ?? ''),
+                    new Date(sub.submitted_at).toLocaleString(),
+                ];
             return vals.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',');
         });
         const csv = [csvHeaders.join(','), ...rows].join('\n');
@@ -946,6 +948,7 @@ function ClientView({
 
                                                 return (
                                                     <tr key={sub.id}>
+                                                        {selectedForm === null && <td>{formatDate(sub.submitted_at)}</td>}
                                                         {selectedForm === null && <td>{sub.form_name}</td>}
                                                         {hasCompoundName && <td>{first}</td>}
                                                         {hasCompoundName && <td>{last}</td>}
@@ -970,7 +973,7 @@ function ClientView({
                                                             return <td key={key}>{val}</td>;
                                                         })}
 
-                                                        <td>{formatDate(sub.submitted_at)}</td>
+                                                        {selectedForm !== null && <td>{formatDate(sub.submitted_at)}</td>}
 
                                                         <td>
                                                             <button
