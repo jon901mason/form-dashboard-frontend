@@ -590,6 +590,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                             syncing={syncing}
                             syncResult={syncResult}
                             loading={loading}
+                            user={user}
                         />
                     )}
                 </div>
@@ -758,7 +759,7 @@ function ClientView({
     filteredSubmissions, submissions, columns, hasCompoundName, dataKeys,
     expandedMessages, onToggleMessage, onDelete, onDeleteForm,
     startDate, endDate, setStartDate, setEndDate, onDownloadCSV,
-    onSync, syncing, syncResult, loading,
+    onSync, syncing, syncResult, loading, user,
 }) {
     if (!client) return null;
 
@@ -791,18 +792,22 @@ function ClientView({
                         </div>
                     </div>
 
-                    <button className="sync-btn" onClick={onSync} disabled={syncing}>
-                        <i className={`ph-light ${syncing ? 'ph-circle-notch' : 'ph-arrows-clockwise'}`}></i>
-                        {syncing ? 'Syncing…' : 'Sync'}
-                    </button>
+                    {user?.is_admin && (
+                        <>
+                            <button className="sync-btn" onClick={onSync} disabled={syncing}>
+                                <i className={`ph-light ${syncing ? 'ph-circle-notch' : 'ph-arrows-clockwise'}`}></i>
+                                {syncing ? 'Syncing…' : 'Sync'}
+                            </button>
 
-                    {syncResult && typeof syncResult === 'object' && (
-                        <div className="sync-result success">
-                            {syncResult.synced} new {syncResult.synced === 1 ? 'submission' : 'submissions'} added
-                        </div>
-                    )}
-                    {syncResult && typeof syncResult === 'string' && (
-                        <div className="sync-result error">Sync failed: {syncResult}</div>
+                            {syncResult && typeof syncResult === 'object' && (
+                                <div className="sync-result success">
+                                    {syncResult.synced} new {syncResult.synced === 1 ? 'submission' : 'submissions'} added
+                                </div>
+                            )}
+                            {syncResult && typeof syncResult === 'string' && (
+                                <div className="sync-result error">Sync failed: {syncResult}</div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
