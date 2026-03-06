@@ -135,7 +135,7 @@ form {
 }
 
 .api-key-display {
-  padding: 24px;
+  padding: 24px !important;
 }
 
 .api-key-display p {
