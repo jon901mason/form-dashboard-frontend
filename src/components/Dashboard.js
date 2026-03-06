@@ -39,7 +39,7 @@ function formatDate(dateStr) {
     const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     if (diffDays === 0) return `Today, ${timeStr}`;
     if (diffDays === 1) return `Yesterday, ${timeStr}`;
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + timeStr;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + timeStr;
 }
 
 function pluginBadge(plugin) {
