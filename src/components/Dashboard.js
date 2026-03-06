@@ -94,6 +94,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [expandedMessages, setExpandedMessages] = useState(new Set());
+    const [allSubmissions, setAllSubmissions] = useState([]); // all forms combined
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null); // { synced, skipped } | string (error)
     const syncResultTimer = useRef(null);
@@ -175,6 +176,21 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         }
     }, [headers]);
 
+    const fetchAllSubmissionsForClient = useCallback(async (clientId) => {
+        if (!clientId) return;
+        setLoading(true);
+        setExpandedMessages(new Set());
+        try {
+            const res = await axios.get(`${API_URL}/api/submissions/client/${clientId}`, { headers });
+            setAllSubmissions(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            setAllSubmissions([]);
+            setError(`Failed to load submissions: ${getAxiosErrorMessage(err)}`);
+        } finally {
+            setLoading(false);
+        }
+    }, [headers]);
+
     // ── Initial load ─────────────────────────────────────────
     useEffect(() => {
         fetchClients();
@@ -245,17 +261,26 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         setExpandedClientIds((prev) => { const next = new Set(prev); next.add(client.id); return next; });
         setView('client');
         setSelectedClient(client);
+        setSelectedForm(null);
+        setSubmissions([]);
+        setStartDate('');
+        setEndDate('');
         setError('');
         setSyncResult(null);
         fetchFormsForClient(client);
         fetchClientStats(client.id);
+        fetchAllSubmissionsForClient(client.id);
     };
 
     const handleFormSelect = async (form) => {
         setSelectedForm(form);
         setStartDate('');
         setEndDate('');
-        await fetchSubmissionsForForm(form);
+        if (form === null) {
+            // "All Forms" — already loaded in allSubmissions
+        } else {
+            await fetchSubmissionsForForm(form);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -326,6 +351,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
             setSyncResult({ synced: res.data.synced ?? 0, skipped: res.data.skipped ?? 0 });
             // Refresh submissions and stats
             if (selectedForm) await fetchSubmissionsForForm(selectedForm);
+            await fetchAllSubmissionsForClient(selectedClient.id);
             await fetchClientStats(selectedClient.id);
         } catch (err) {
             setSyncResult(getAxiosErrorMessage(err));
@@ -348,54 +374,61 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         });
     };
 
+    // ── Active submissions (all forms or single form) ─────────
+    const activeSubmissions = selectedForm === null ? allSubmissions : submissions;
+
     // ── Filtered submissions ──────────────────────────────────
     const filteredSubmissions = useMemo(() => {
-        if (!startDate && !endDate) return submissions;
-        return submissions.filter((sub) => {
+        if (!startDate && !endDate) return activeSubmissions;
+        return activeSubmissions.filter((sub) => {
             const d = new Date(sub.submitted_at);
             const start = startDate ? new Date(startDate) : new Date('1970-01-01');
             const end = endDate ? new Date(endDate) : new Date('2099-12-31');
             end.setHours(23, 59, 59, 999);
             return d >= start && d <= end;
         });
-    }, [submissions, startDate, endDate]);
+    }, [activeSubmissions, startDate, endDate]);
 
     // ── Column detection (Gravity Forms vs others) ────────────
     const hasCompoundName = useMemo(
-        () => submissions.some((sub) => 'Name' in (sub?.submission_data || {})),
-        [submissions]
+        () => selectedForm !== null && activeSubmissions.some((sub) => 'Name' in (sub?.submission_data || {})),
+        [activeSubmissions, selectedForm]
     );
 
     const dataKeys = useMemo(() => {
-        if (!submissions.length) return [];
+        if (!activeSubmissions.length) return [];
         const keys = [];
         const seen = new Set();
-        submissions.forEach((sub) => {
+        activeSubmissions.forEach((sub) => {
             Object.keys(sub?.submission_data || {}).forEach((key) => {
                 if (hasCompoundName && key === 'Name') return;
                 if (!seen.has(key)) { seen.add(key); keys.push(key); }
             });
         });
         return keys;
-    }, [submissions, hasCompoundName]);
+    }, [activeSubmissions, hasCompoundName]);
 
     const columns = useMemo(() => {
-        if (!submissions.length) return [];
+        if (!activeSubmissions.length) return [];
+        if (selectedForm === null) return ['Form', ...dataKeys, 'Submitted', ''];
         if (hasCompoundName) return ['First Name', 'Last Name', ...dataKeys, 'Submitted', ''];
         return [...dataKeys, 'Submitted', ''];
-    }, [submissions, dataKeys, hasCompoundName]);
+    }, [activeSubmissions, dataKeys, hasCompoundName, selectedForm]);
 
     // ── CSV export ────────────────────────────────────────────
     const downloadCSV = () => {
         if (!filteredSubmissions.length) { alert('No submissions to download'); return; }
-        const csvHeaders = hasCompoundName
-            ? ['First Name', 'Last Name', ...dataKeys, 'Submitted']
-            : [...dataKeys, 'Submitted'];
+        const isAllForms = selectedForm === null;
+        const csvHeaders = isAllForms
+            ? ['Form', ...dataKeys, 'Submitted']
+            : hasCompoundName
+                ? ['First Name', 'Last Name', ...dataKeys, 'Submitted']
+                : [...dataKeys, 'Submitted'];
         const rows = filteredSubmissions.map((sub) => {
             const data = sub?.submission_data || {};
             const { first, last } = splitName(data?.Name);
             const vals = [
-                ...(hasCompoundName ? [first, last] : []),
+                ...(isAllForms ? [sub.form_name] : hasCompoundName ? [first, last] : []),
                 ...dataKeys.map((k) => data?.[k] ?? ''),
                 new Date(sub.submitted_at).toLocaleString(),
             ];
@@ -404,7 +437,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         const csv = [csvHeaders.join(','), ...rows].join('\n');
         const el = document.createElement('a');
         el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csv));
-        el.setAttribute('download', `${selectedForm?.form_name || 'submissions'}.csv`);
+        el.setAttribute('download', `${selectedForm ? selectedForm.form_name : 'all-submissions'}.csv`);
         el.style.display = 'none';
         document.body.appendChild(el);
         el.click();
@@ -573,7 +606,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                             selectedForm={selectedForm}
                             onFormSelect={handleFormSelect}
                             filteredSubmissions={filteredSubmissions}
-                            submissions={submissions}
+                            submissions={activeSubmissions}
                             columns={columns}
                             hasCompoundName={hasCompoundName}
                             dataKeys={dataKeys}
@@ -822,37 +855,49 @@ function ClientView({
                     ) : forms.length === 0 ? (
                         <div className="forms-empty">No forms found</div>
                     ) : (
-                        forms.map((form) => (
+                        <>
                             <div
-                                key={form.id}
-                                className={`form-item${selectedForm?.id === form.id ? ' active' : ''}`}
-                                onClick={() => onFormSelect(form)}
+                                className={`form-item${selectedForm === null ? ' active' : ''}`}
+                                onClick={() => onFormSelect(null)}
                             >
-                                <i className="ph-light ph-file-text"></i>
+                                <i className="ph-light ph-stack"></i>
                                 <div className="form-item-text">
-                                    {form.form_name}
-                                    <span className="form-plugin">{pluginLabel(form.form_plugin)}</span>
+                                    All Forms
+                                    <span className="form-plugin">{forms.length} forms</span>
                                 </div>
-                                <button
-                                    className="form-delete-btn"
-                                    title="Delete form"
-                                    onClick={(e) => { e.stopPropagation(); onDeleteForm(form); }}
-                                >
-                                    <i className="ph-light ph-trash"></i>
-                                </button>
                             </div>
-                        ))
+                            {forms.map((form) => (
+                                <div
+                                    key={form.id}
+                                    className={`form-item${selectedForm?.id === form.id ? ' active' : ''}`}
+                                    onClick={() => onFormSelect(form)}
+                                >
+                                    <i className="ph-light ph-file-text"></i>
+                                    <div className="form-item-text">
+                                        {form.form_name}
+                                        <span className="form-plugin">{pluginLabel(form.form_plugin)}</span>
+                                    </div>
+                                    <button
+                                        className="form-delete-btn"
+                                        title="Delete form"
+                                        onClick={(e) => { e.stopPropagation(); onDeleteForm(form); }}
+                                    >
+                                        <i className="ph-light ph-trash"></i>
+                                    </button>
+                                </div>
+                            ))}
+                        </>
                     )}
                 </div>
 
                 {/* Submissions table */}
                 <div className="submissions-card">
-                    {selectedForm ? (
+                    {(selectedForm !== null || submissions.length > 0) ? (
                         <>
                             <div className="submissions-header">
                                 <div>
-                                    <h2>{selectedForm.form_name}</h2>
-                                    <p>Showing submissions for this form</p>
+                                    <h2>{selectedForm ? selectedForm.form_name : 'All Forms'}</h2>
+                                    <p>{selectedForm ? 'Showing submissions for this form' : 'Showing submissions across all forms'}</p>
                                 </div>
                                 <div className="header-actions">
                                     <div className="date-filter">
@@ -901,6 +946,7 @@ function ClientView({
 
                                                 return (
                                                     <tr key={sub.id}>
+                                                        {selectedForm === null && <td>{sub.form_name}</td>}
                                                         {hasCompoundName && <td>{first}</td>}
                                                         {hasCompoundName && <td>{last}</td>}
 
@@ -943,11 +989,7 @@ function ClientView({
                             </div>
                         </>
                     ) : (
-                        <div className="empty-state">
-                            {forms.length === 0
-                                ? 'No forms found for this client.'
-                                : 'Select a form to view submissions.'}
-                        </div>
+                        <div className="empty-state">No forms found for this client.</div>
                     )}
                 </div>
             </div>
