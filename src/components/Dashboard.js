@@ -42,6 +42,16 @@ function formatDate(dateStr) {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + timeStr;
 }
 
+function formatDateOnly(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function pluginBadge(plugin) {
     if (!plugin) return null;
     const lower = plugin.toLowerCase();
@@ -948,7 +958,7 @@ function ClientView({
 
                                                 return (
                                                     <tr key={sub.id}>
-                                                        {selectedForm === null && <td>{formatDate(sub.submitted_at)}</td>}
+                                                        {selectedForm === null && <td>{formatDateOnly(sub.submitted_at)}</td>}
                                                         {selectedForm === null && <td>{sub.form_name}</td>}
                                                         {hasCompoundName && <td>{first}</td>}
                                                         {hasCompoundName && <td>{last}</td>}
