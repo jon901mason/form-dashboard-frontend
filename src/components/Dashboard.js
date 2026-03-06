@@ -105,6 +105,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
     const [endDate, setEndDate] = useState('');
     const [expandedMessages, setExpandedMessages] = useState(new Set());
     const [allSubmissions, setAllSubmissions] = useState([]); // all forms combined
+    const [selectedIds, setSelectedIds] = useState(new Set());
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null); // { synced, skipped } | string (error)
     const syncResultTimer = useRef(null);
@@ -286,6 +287,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         setSelectedForm(form);
         setStartDate('');
         setEndDate('');
+        setSelectedIds(new Set());
         if (form === null) {
             // "All Forms" — already loaded in allSubmissions
         } else {
@@ -298,6 +300,21 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         try {
             await axios.delete(`${API_URL}/api/forms/submissions/${id}`, { headers });
             setSubmissions((prev) => prev.filter((s) => s.id !== id));
+            setAllSubmissions((prev) => prev.filter((s) => s.id !== id));
+        } catch (err) {
+            alert(getAxiosErrorMessage(err));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (!window.confirm(`Delete ${selectedIds.size} selected submission${selectedIds.size === 1 ? '' : 's'}?`)) return;
+        try {
+            const ids = Array.from(selectedIds);
+            await axios.delete(`${API_URL}/api/forms/submissions/bulk`, { data: { ids }, headers });
+            setSubmissions((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+            setAllSubmissions((prev) => prev.filter((s) => !selectedIds.has(s.id)));
+            setSelectedIds(new Set());
         } catch (err) {
             alert(getAxiosErrorMessage(err));
         }
@@ -625,6 +642,9 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                             expandedMessages={expandedMessages}
                             onToggleMessage={toggleMessage}
                             onDelete={handleDelete}
+                            onBulkDelete={handleBulkDelete}
+                            selectedIds={selectedIds}
+                            setSelectedIds={setSelectedIds}
                             onDeleteForm={handleDeleteForm}
                             startDate={startDate}
                             endDate={endDate}
@@ -802,7 +822,7 @@ function StatCardHome({ label, value, iconClass, color, sparklineData, trend }) 
 function ClientView({
     client, clientStats, forms, selectedForm, onFormSelect,
     filteredSubmissions, submissions, columns, hasCompoundName, dataKeys,
-    expandedMessages, onToggleMessage, onDelete, onDeleteForm,
+    expandedMessages, onToggleMessage, onDelete, onBulkDelete, selectedIds, setSelectedIds, onDeleteForm,
     startDate, endDate, setStartDate, setEndDate, onDownloadCSV,
     onSync, syncing, syncResult, loading, user,
 }) {
@@ -934,6 +954,11 @@ function ClientView({
 
                             <div className="submission-count">
                                 Showing {filteredSubmissions.length} of {submissions.length} submissions
+                                {selectedIds.size > 0 && (
+                                    <button className="bulk-delete-btn" onClick={onBulkDelete}>
+                                        <i className="ph-light ph-trash"></i> Delete {selectedIds.size} selected
+                                    </button>
+                                )}
                             </div>
 
                             <div className="submissions-table-scroll">
@@ -945,6 +970,19 @@ function ClientView({
                                     <table>
                                         <thead>
                                             <tr>
+                                                <th>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filteredSubmissions.length > 0 && filteredSubmissions.every((s) => selectedIds.has(s.id))}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedIds(new Set(filteredSubmissions.map((s) => s.id)));
+                                                            } else {
+                                                                setSelectedIds(new Set());
+                                                            }
+                                                        }}
+                                                    />
+                                                </th>
                                                 {columns.map((col, i) => (
                                                     <th key={i}>{col}</th>
                                                 ))}
@@ -957,7 +995,20 @@ function ClientView({
                                                 const isExpanded = expandedMessages.has(sub.id);
 
                                                 return (
-                                                    <tr key={sub.id}>
+                                                    <tr key={sub.id} className={selectedIds.has(sub.id) ? 'row-selected' : ''}>
+                                                        <td>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedIds.has(sub.id)}
+                                                                onChange={(e) => {
+                                                                    setSelectedIds((prev) => {
+                                                                        const next = new Set(prev);
+                                                                        e.target.checked ? next.add(sub.id) : next.delete(sub.id);
+                                                                        return next;
+                                                                    });
+                                                                }}
+                                                            />
+                                                        </td>
                                                         {selectedForm === null && <td>{formatDateOnly(sub.submitted_at)}</td>}
                                                         {selectedForm === null && <td>{sub.form_name}</td>}
                                                         {hasCompoundName && <td>{first}</td>}
