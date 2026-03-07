@@ -1483,7 +1483,7 @@ function ConsentFormView({ submissions, selectedSubmission, onSelectSubmission, 
                                         onClick={() => onSelectSubmission(sub)}
                                     >
                                         <td>{getCompanyName(sub.submission_data)}</td>
-                                        <td>{formatDate(sub.submitted_at)}</td>
+                                        <td>{formatDateOnly(sub.submitted_at)}</td>
                                         <td onClick={(e) => e.stopPropagation()}>
                                             <button
                                                 className="delete-btn"
