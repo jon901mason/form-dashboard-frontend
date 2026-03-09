@@ -432,14 +432,20 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                 if (!seen.has(key)) { seen.add(key); keys.push(key); }
             });
         });
-        return keys;
+        // Pin name-like fields first, then email, then the rest
+        const isNameKey  = (k) => /^(first\s*name|last\s*name|full\s*name|name)$/i.test(k.trim());
+        const isEmailKey = (k) => /^e-?mail(\s+address)?$/i.test(k.trim());
+        const nameKeys  = keys.filter(isNameKey);
+        const emailKeys = keys.filter(isEmailKey);
+        const rest      = keys.filter((k) => !isNameKey(k) && !isEmailKey(k));
+        return [...nameKeys, ...emailKeys, ...rest];
     }, [activeSubmissions, hasCompoundName]);
 
     const columns = useMemo(() => {
         if (!activeSubmissions.length) return [];
         if (selectedForm === null) return ['Submitted', 'Form', ...dataKeys, ''];
-        if (hasCompoundName) return ['First Name', 'Last Name', ...dataKeys, 'Submitted', ''];
-        return [...dataKeys, 'Submitted', ''];
+        if (hasCompoundName) return ['Submitted', 'First Name', 'Last Name', ...dataKeys, ''];
+        return ['Submitted', ...dataKeys, ''];
     }, [activeSubmissions, dataKeys, hasCompoundName, selectedForm]);
 
     // ── CSV export ────────────────────────────────────────────
@@ -449,17 +455,17 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         const csvHeaders = isAllForms
             ? ['Submitted', 'Form', ...dataKeys]
             : hasCompoundName
-                ? ['First Name', 'Last Name', ...dataKeys, 'Submitted']
-                : [...dataKeys, 'Submitted'];
+                ? ['Submitted', 'First Name', 'Last Name', ...dataKeys]
+                : ['Submitted', ...dataKeys];
         const rows = filteredSubmissions.map((sub) => {
             const data = sub?.submission_data || {};
             const { first, last } = splitName(data?.Name);
             const vals = isAllForms
                 ? [new Date(sub.submitted_at).toLocaleString(), sub.form_name, ...dataKeys.map((k) => data?.[k] ?? '')]
                 : [
+                    new Date(sub.submitted_at).toLocaleString(),
                     ...(hasCompoundName ? [first, last] : []),
                     ...dataKeys.map((k) => data?.[k] ?? ''),
-                    new Date(sub.submitted_at).toLocaleString(),
                 ];
             return vals.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',');
         });
@@ -1011,6 +1017,7 @@ function ClientView({
                                                         </td>
                                                         {selectedForm === null && <td>{formatDateOnly(sub.submitted_at)}</td>}
                                                         {selectedForm === null && <td>{sub.form_name}</td>}
+                                                        {selectedForm !== null && <td>{formatDate(sub.submitted_at)}</td>}
                                                         {hasCompoundName && <td>{first}</td>}
                                                         {hasCompoundName && <td>{last}</td>}
 
@@ -1033,8 +1040,6 @@ function ClientView({
                                                             }
                                                             return <td key={key}>{val}</td>;
                                                         })}
-
-                                                        {selectedForm !== null && <td>{formatDate(sub.submitted_at)}</td>}
 
                                                         <td>
                                                             <button
