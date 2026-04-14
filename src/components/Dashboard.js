@@ -108,6 +108,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null); // { synced, skipped } | string (error)
+    const [searchQuery, setSearchQuery] = useState('');
     const syncResultTimer = useRef(null);
 
     const avatarRef = useRef(null);
@@ -276,6 +277,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         setSubmissions([]);
         setStartDate('');
         setEndDate('');
+        setSearchQuery('');
         setError('');
         setSyncResult(null);
         fetchFormsForClient(client);
@@ -287,6 +289,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         setSelectedForm(form);
         setStartDate('');
         setEndDate('');
+        setSearchQuery('');
         setSelectedIds(new Set());
         if (form === null) {
             // "All Forms" — already loaded in allSubmissions
@@ -406,15 +409,27 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
 
     // ── Filtered submissions ──────────────────────────────────
     const filteredSubmissions = useMemo(() => {
-        if (!startDate && !endDate) return activeSubmissions;
-        return activeSubmissions.filter((sub) => {
-            const d = new Date(sub.submitted_at);
-            const start = startDate ? new Date(startDate) : new Date('1970-01-01');
-            const end = endDate ? new Date(endDate) : new Date('2099-12-31');
-            end.setHours(23, 59, 59, 999);
-            return d >= start && d <= end;
-        });
-    }, [activeSubmissions, startDate, endDate]);
+        let result = activeSubmissions;
+        if (startDate || endDate) {
+            result = result.filter((sub) => {
+                const d = new Date(sub.submitted_at);
+                const start = startDate ? new Date(startDate) : new Date('1970-01-01');
+                const end = endDate ? new Date(endDate) : new Date('2099-12-31');
+                end.setHours(23, 59, 59, 999);
+                return d >= start && d <= end;
+            });
+        }
+        if (searchQuery.trim()) {
+            const q = searchQuery.trim().toLowerCase();
+            result = result.filter((sub) => {
+                const data = sub?.submission_data || {};
+                return Object.values(data).some((v) =>
+                    String(v ?? '').toLowerCase().includes(q)
+                );
+            });
+        }
+        return result;
+    }, [activeSubmissions, startDate, endDate, searchQuery]);
 
     // ── Column detection (Gravity Forms vs others) ────────────
     const hasCompoundName = useMemo(
@@ -656,6 +671,8 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                             endDate={endDate}
                             setStartDate={setStartDate}
                             setEndDate={setEndDate}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
                             onDownloadCSV={downloadCSV}
                             onSync={handleSync}
                             syncing={syncing}
@@ -829,7 +846,7 @@ function ClientView({
     client, clientStats, forms, selectedForm, onFormSelect,
     filteredSubmissions, submissions, columns, hasCompoundName, dataKeys,
     expandedMessages, onToggleMessage, onDelete, onBulkDelete, selectedIds, setSelectedIds, onDeleteForm,
-    startDate, endDate, setStartDate, setEndDate, onDownloadCSV,
+    startDate, endDate, setStartDate, setEndDate, searchQuery, setSearchQuery, onDownloadCSV,
     onSync, syncing, syncResult, loading, user,
 }) {
     if (!client) return null;
@@ -938,6 +955,22 @@ function ClientView({
                                     <p>{selectedForm ? 'Showing submissions for this form' : 'Showing submissions across all forms'}</p>
                                 </div>
                                 <div className="header-actions">
+                                    {user?.is_admin && (
+                                        <div className="search-filter">
+                                            <i className="ph-light ph-magnifying-glass"></i>
+                                            <input
+                                                type="text"
+                                                placeholder="Search submissions…"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                            />
+                                            {searchQuery && (
+                                                <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                                                    <i className="ph-light ph-x"></i>
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className="date-filter">
                                         From
                                         <input
