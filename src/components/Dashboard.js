@@ -112,6 +112,7 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
     const syncResultTimer = useRef(null);
 
     const avatarRef = useRef(null);
+    const autoSelectedRef = useRef(false);
 
     const headers = useMemo(
         () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
@@ -209,6 +210,15 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
         fetchStats();
         fetchRecentSubmissions();
     }, [fetchClients, fetchStats, fetchRecentSubmissions]);
+
+    // Portal users: auto-select their client once the list loads
+    useEffect(() => {
+        if (user?.client_id && clients.length > 0 && !autoSelectedRef.current) {
+            autoSelectedRef.current = true;
+            const myClient = clients.find(c => c.id === user.client_id);
+            if (myClient) handleClientSelect(myClient);
+        }
+    }, [clients]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Reload home stats when returning to home
     useEffect(() => {
@@ -458,10 +468,11 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
 
     const columns = useMemo(() => {
         if (!activeSubmissions.length) return [];
-        if (selectedForm === null) return ['Submitted', 'Form', ...dataKeys, ''];
-        if (hasCompoundName) return ['Submitted', 'First Name', 'Last Name', ...dataKeys, ''];
-        return ['Submitted', ...dataKeys, ''];
-    }, [activeSubmissions, dataKeys, hasCompoundName, selectedForm]);
+        const deleteCol = user?.client_id ? [] : [''];
+        if (selectedForm === null) return ['Submitted', 'Form', ...dataKeys, ...deleteCol];
+        if (hasCompoundName) return ['Submitted', 'First Name', 'Last Name', ...dataKeys, ...deleteCol];
+        return ['Submitted', ...dataKeys, ...deleteCol];
+    }, [activeSubmissions, dataKeys, hasCompoundName, selectedForm, user]);
 
     // ── CSV export ────────────────────────────────────────────
     const downloadCSV = () => {
@@ -511,21 +522,25 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                 <nav className="sidebar-nav">
                     <div className="nav-label">Menu</div>
 
-                    <div
-                        className={`nav-item${view === 'home' ? ' active' : ''}`}
-                        onClick={handleHomeClick}
-                    >
-                        <span className="nav-icon"><i className="ph-light ph-house"></i></span>
-                        Home
-                    </div>
+                    {!user?.client_id && (
+                        <div
+                            className={`nav-item${view === 'home' ? ' active' : ''}`}
+                            onClick={handleHomeClick}
+                        >
+                            <span className="nav-icon"><i className="ph-light ph-house"></i></span>
+                            Home
+                        </div>
+                    )}
 
-                    <div
-                        className={`nav-item${view === 'consent' ? ' active' : ''}`}
-                        onClick={handleConsentFormClick}
-                    >
-                        <span className="nav-icon"><i className="ph-light ph-file-text"></i></span>
-                        Client Consent Form
-                    </div>
+                    {!user?.client_id && (
+                        <div
+                            className={`nav-item${view === 'consent' ? ' active' : ''}`}
+                            onClick={handleConsentFormClick}
+                        >
+                            <span className="nav-icon"><i className="ph-light ph-file-text"></i></span>
+                            Client Consent Form
+                        </div>
+                    )}
 
                     <div
                         className={`nav-item${clientsOpen ? ' clients-open' : ''}${view === 'client' ? ' active' : ''}`}
@@ -573,22 +588,26 @@ function Dashboard({ user, token, onLogout, onUpdateUser }) {
                     {view === 'client' && selectedClient ? (
                         <div className="topbar-client-section">
                             <span className="topbar-client-name">{selectedClient.name}</span>
-                            <div className="topbar-client-actions">
-                                <button className="delete-client-btn" onClick={() => setShowEditClient(true)}>
-                                    <i className="ph-light ph-pencil-simple"></i> Edit
-                                </button>
-                                <button className="delete-client-btn" onClick={handleDeleteClient}>
-                                    <i className="ph-light ph-trash"></i> Delete
-                                </button>
-                            </div>
+                            {!user?.client_id && (
+                                <div className="topbar-client-actions">
+                                    <button className="delete-client-btn" onClick={() => setShowEditClient(true)}>
+                                        <i className="ph-light ph-pencil-simple"></i> Edit
+                                    </button>
+                                    <button className="delete-client-btn" onClick={handleDeleteClient}>
+                                        <i className="ph-light ph-trash"></i> Delete
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="topbar-title"></div>
                     )}
 
-                    <button className="add-client-btn" onClick={() => setShowAddClient(true)}>
-                        <span style={{ fontSize: 18, lineHeight: 1, marginTop: -1 }}>+</span> Add Client
-                    </button>
+                    {!user?.client_id && (
+                        <button className="add-client-btn" onClick={() => setShowAddClient(true)}>
+                            <span style={{ fontSize: 18, lineHeight: 1, marginTop: -1 }}>+</span> Add Client
+                        </button>
+                    )}
 
                     <div className="avatar-wrap" ref={avatarRef} onClick={() => setAvatarOpen((o) => !o)}>
                         <div className="avatar">
@@ -932,13 +951,15 @@ function ClientView({
                                         {form.form_name}
                                         <span className="form-plugin">{pluginLabel(form.form_plugin)}</span>
                                     </div>
-                                    <button
-                                        className="form-delete-btn"
-                                        title="Delete form"
-                                        onClick={(e) => { e.stopPropagation(); onDeleteForm(form); }}
-                                    >
-                                        <i className="ph-light ph-trash"></i>
-                                    </button>
+                                    {!user?.client_id && (
+                                        <button
+                                            className="form-delete-btn"
+                                            title="Delete form"
+                                            onClick={(e) => { e.stopPropagation(); onDeleteForm(form); }}
+                                        >
+                                            <i className="ph-light ph-trash"></i>
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </>
@@ -955,22 +976,20 @@ function ClientView({
                                     <p>{selectedForm ? 'Showing submissions for this form' : 'Showing submissions across all forms'}</p>
                                 </div>
                                 <div className="header-actions">
-                                    {user?.is_admin && (
-                                        <div className="search-filter">
-                                            <i className="ph-light ph-magnifying-glass"></i>
-                                            <input
-                                                type="text"
-                                                placeholder="Search submissions…"
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                            />
-                                            {searchQuery && (
-                                                <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
-                                                    <i className="ph-light ph-x"></i>
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
+                                    <div className="search-filter">
+                                        <i className="ph-light ph-magnifying-glass"></i>
+                                        <input
+                                            type="text"
+                                            placeholder="Search submissions…"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                        {searchQuery && (
+                                            <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                                                <i className="ph-light ph-x"></i>
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="date-filter">
                                         From
                                         <input
@@ -993,7 +1012,7 @@ function ClientView({
 
                             <div className="submission-count">
                                 Showing {filteredSubmissions.length} of {submissions.length} submissions
-                                {selectedIds.size > 0 && (
+                                {!user?.client_id && selectedIds.size > 0 && (
                                     <button className="bulk-delete-btn" onClick={onBulkDelete}>
                                         <i className="ph-light ph-trash"></i> Delete {selectedIds.size} selected
                                     </button>
@@ -1009,19 +1028,21 @@ function ClientView({
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={filteredSubmissions.length > 0 && filteredSubmissions.every((s) => selectedIds.has(s.id))}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedIds(new Set(filteredSubmissions.map((s) => s.id)));
-                                                            } else {
-                                                                setSelectedIds(new Set());
-                                                            }
-                                                        }}
-                                                    />
-                                                </th>
+                                                {!user?.client_id && (
+                                                    <th>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filteredSubmissions.length > 0 && filteredSubmissions.every((s) => selectedIds.has(s.id))}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedIds(new Set(filteredSubmissions.map((s) => s.id)));
+                                                                } else {
+                                                                    setSelectedIds(new Set());
+                                                                }
+                                                            }}
+                                                        />
+                                                    </th>
+                                                )}
                                                 {columns.map((col, i) => (
                                                     <th key={i}>{col}</th>
                                                 ))}
@@ -1035,19 +1056,21 @@ function ClientView({
 
                                                 return (
                                                     <tr key={sub.id} className={selectedIds.has(sub.id) ? 'row-selected' : ''}>
-                                                        <td>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedIds.has(sub.id)}
-                                                                onChange={(e) => {
-                                                                    setSelectedIds((prev) => {
-                                                                        const next = new Set(prev);
-                                                                        e.target.checked ? next.add(sub.id) : next.delete(sub.id);
-                                                                        return next;
-                                                                    });
-                                                                }}
-                                                            />
-                                                        </td>
+                                                        {!user?.client_id && (
+                                                            <td>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedIds.has(sub.id)}
+                                                                    onChange={(e) => {
+                                                                        setSelectedIds((prev) => {
+                                                                            const next = new Set(prev);
+                                                                            e.target.checked ? next.add(sub.id) : next.delete(sub.id);
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                />
+                                                            </td>
+                                                        )}
                                                         {selectedForm === null && <td>{formatDateOnly(sub.submitted_at)}</td>}
                                                         {selectedForm === null && <td>{sub.form_name}</td>}
                                                         {selectedForm !== null && <td>{formatDate(sub.submitted_at)}</td>}
@@ -1074,14 +1097,16 @@ function ClientView({
                                                             return <td key={key}>{val}</td>;
                                                         })}
 
-                                                        <td>
-                                                            <button
-                                                                className="delete-btn"
-                                                                onClick={() => onDelete(sub.id)}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
+                                                        {!user?.client_id && (
+                                                            <td>
+                                                                <button
+                                                                    className="delete-btn"
+                                                                    onClick={() => onDelete(sub.id)}
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 );
                                             })}
@@ -1235,9 +1260,17 @@ function CreateUser({ token, onClose }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
+    const [clientId, setClientId] = useState('');
+    const [clients, setClients] = useState([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    useEffect(() => {
+        axios.get(`${API_URL}/api/clients`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(res => setClients(Array.isArray(res.data) ? res.data : []))
+            .catch(() => {});
+    }, [token]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1245,7 +1278,11 @@ function CreateUser({ token, onClose }) {
         setError('');
         setSuccess('');
         try {
-            await axios.post(`${API_URL}/api/admin/users`, { name, email, password, avatar_url: avatarUrl || null }, {
+            await axios.post(`${API_URL}/api/admin/users`, {
+                name, email, password,
+                avatar_url: avatarUrl || null,
+                client_id: clientId ? parseInt(clientId, 10) : null,
+            }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess(`Account created for ${email}`);
@@ -1253,6 +1290,7 @@ function CreateUser({ token, onClose }) {
             setEmail('');
             setPassword('');
             setAvatarUrl('');
+            setClientId('');
         } catch (err) {
             setError(err?.response?.data?.error || 'Failed to create user');
         } finally {
@@ -1281,6 +1319,18 @@ function CreateUser({ token, onClose }) {
                     <div className="modal-form-group">
                         <label>Password</label>
                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                    </div>
+                    <div className="modal-form-group">
+                        <label>Client Access</label>
+                        <select value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                            <option value="">Internal user (agency access)</option>
+                            {clients.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                        <p style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                            Select a client to restrict this user to only their submissions.
+                        </p>
                     </div>
                     <div className="modal-form-group">
                         <label>Profile Photo URL</label>
